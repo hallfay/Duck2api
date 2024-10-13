@@ -9,4 +9,6 @@ services:
       - "5179:5179"
     volumes:
       - ./duck.py:/app/duck.py
+    environment:
+      - ACCESS_TOKEN=${ACCESS_TOKEN:-your_default_secret_token_here}
     restart: unless-stopped

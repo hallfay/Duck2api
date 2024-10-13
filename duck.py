@@ -4,16 +4,27 @@ import string
 from collections import deque
 import time
 import httpx
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import json
 import tiktoken
 from contextlib import asynccontextmanager
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+import os
 
 # 代理设置
 # PROXY = "http://127.0.0.1:7980"
 
+# 添加以下代码来设置访问令牌
+ACCESS_TOKEN = os.getenv('ACCESS_TOKEN', 'your_default_secret_token_here')  # 将此替换为您的实际访问令牌
+
+security = HTTPBearer()
+
+def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    if credentials.credentials != ACCESS_TOKEN:
+        raise HTTPException(status_code=401, detail="无效的访问令牌")
+    return credentials.credentials
 
 def global_retry_decorator():
     return retry(
@@ -310,7 +321,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-@app.post("/v1/chat/completions")
+@app.post("/v1/chat/completions", dependencies=[Depends(verify_token)])
 async def proxy(request: Request):
     try:
         json_data = await request.json()
